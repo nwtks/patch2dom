@@ -21,8 +21,8 @@ function patch(parent, vnode) {
 function patchChildren(parent, vnodes) {
   var newKeys = [];
   vnodes.forEach(function (vn) {
-    if (vn && vn.domkey) {
-      newKeys.push(vn.domkey);
+    if (vn && vn.attrs && vn.attrs.domkey) {
+      newKeys.push(vn.attrs.domkey);
     }
   });
 
@@ -53,7 +53,7 @@ function patchChildren(parent, vnodes) {
         parent.appendChild(document.createTextNode(vn));
       }
     } else if (isObject(vn)) {
-      var vnkey = vn.domkey;
+      var vnkey = vn.attrs.domkey;
       var oldKeyed = vnkey ? oldKeyedNodes[vnkey] : null;
       if (oldKeyed) {
         delete oldKeyedNodes[vnkey];
@@ -127,6 +127,15 @@ function patchAttrs(el, attrs) {
       el[k] = v;
       if (v === true) {
         el.setAttribute(k.toLowerCase(), '');
+      } else if (v === false) {
+        el.removeAttribute(k.toLowerCase());
+      }
+      if (k === 'value') {
+        if (v == null) {
+          el.removeAttribute(k);
+        } else {
+          el.setAttribute(k, v);
+        }
       }
     } else if (vt === 'function' || (k[0] === 'o' && k[1] === 'n')) {
       el[k] = v;
