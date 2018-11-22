@@ -1,18 +1,18 @@
 {
-  "name": "patchdom",
+  "name": "patch2dom",
   "version": "0.1.0",
   "description": "patch virtual node to DOM.",
   "license": "MIT",
-  "main": "dist/patchdom.js",
+  "main": "dist/patch2dom.js",
   "files": [
     "src",
     "dist"
   ],
   "author": "nwtks",
-  "homepage": "https://github.com/nwtks/patchdom",
+  "homepage": "https://github.com/nwtks/patch2dom",
   "repository": {
     "type": "git",
-    "url": "https://github.com/nwtks/patchdom"
+    "url": "https://github.com/nwtks/patch2dom"
   },
   "devDependencies": {
     "rollup": "^0.67.0",
