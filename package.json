@@ -1,0 +1,25 @@
+{
+  "name": "patchdom",
+  "version": "0.1.0",
+  "description": "patch virtual node to DOM.",
+  "license": "MIT",
+  "main": "dist/patchdom.js",
+  "files": [
+    "src",
+    "dist"
+  ],
+  "author": "nwtks",
+  "homepage": "https://github.com/nwtks/patchdom",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nwtks/patchdom"
+  },
+  "devDependencies": {
+    "rollup": "^0.67.0",
+    "rollup-plugin-buble": "^0.19.0",
+    "rollup-plugin-uglify": "^6.0.0"
+  },
+  "scripts": {
+    "build": "rollup -c"
+  }
+}

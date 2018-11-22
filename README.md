@@ -1,2 +1,3 @@
-# vno2dom
-virtual node to DOM.
+# patchdom
+
+patch virtual node to DOM.
