@@ -123,7 +123,14 @@ function patchAttrs(el, attrs) {
   Object.getOwnPropertyNames(attrs).forEach(function (k) {
     var v = attrs[k];
     var vt = typeof v;
-    if (k in el) {
+    if (k === 'style') {
+      el.style.cssText = v;
+      if (v) {
+        el.setAttribute(k, v);
+      } else {
+        el.removeAttribute(k);
+      }
+    } else if (k in el) {
       el[k] = v;
       if (v === true) {
         el.setAttribute(k.toLowerCase(), '');
