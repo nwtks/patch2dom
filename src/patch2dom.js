@@ -17,69 +17,69 @@ function patch(parent, vnode) {
 }
 
 function patchChildren(parent, vnodes) {
-  const newKeys = []
+  const vnodeKeys = []
   vnodes.forEach(vn => {
     if (vn && vn.attrs && vn.attrs.domkey) {
-      newKeys.push(vn.attrs.domkey)
+      vnodeKeys.push(vn.attrs.domkey)
     }
   })
 
-  const oldKeyedNodes = Object.create(null)
-  for (let oNode = parent.firstChild; oNode; oNode = oNode.nextSibling) {
-    const oKey = getKey(oNode)
-    if (oKey) {
-      if (newKeys.indexOf(oKey) >= 0) {
-        oldKeyedNodes[oKey] = oNode
+  const keyedNodes = Object.create(null)
+  for (let nd = parent.firstChild; nd; nd = nd.nextSibling) {
+    const ndKey = getKey(nd)
+    if (ndKey) {
+      if (vnodeKeys.indexOf(ndKey) >= 0) {
+        keyedNodes[ndKey] = nd
       } else {
-        parent.removeChild(oNode)
+        parent.removeChild(nd)
       }
     }
   }
 
-  let oldNode = parent.firstChild
+  let node = parent.firstChild
   vnodes.forEach(vn => {
     const vntype = typeof vn
     if (vntype === 'string' || vntype === 'number') {
-      if (oldNode) {
-        if (oldNode.nodeType === TEXT_NODE) {
-          oldNode.nodeValue = vn
-          oldNode = oldNode.nextSibling
+      if (node) {
+        if (node.nodeType === TEXT_NODE) {
+          node.nodeValue = vn
+          node = node.nextSibling
         } else {
-          parent.insertBefore(document.createTextNode(vn), oldNode)
+          parent.insertBefore(document.createTextNode(vn), node)
         }
       } else {
         parent.appendChild(document.createTextNode(vn))
       }
     } else if (isObject(vn)) {
       const vnkey = vn.attrs.domkey
-      const oldKeyed = vnkey ? oldKeyedNodes[vnkey] : null
-      if (oldKeyed) {
-        delete oldKeyedNodes[vnkey]
-        if (oldKeyed === oldNode) {
-          oldNode = oldNode.nextSibling
+      const keyed = vnkey ? keyedNodes[vnkey] : null
+      if (keyed) {
+        delete keyedNodes[vnkey]
+        if (keyed === node) {
+          node = node.nextSibling
         } else {
-          parent.insertBefore(oldKeyed, oldNode)
+          parent.insertBefore(keyed, node)
         }
-        patchAttrs(oldKeyed, vn.attrs)
-        patchChildren(oldKeyed, vn.children)
-      } else if (oldNode) {
+        patchAttrs(keyed, vn.attrs)
+        patchChildren(keyed, vn.children)
+      } else if (node) {
         if (vnkey) {
-          parent.insertBefore(createElement(vn), oldNode)
+          parent.insertBefore(createElement(vn), node)
         } else {
           while (true) {
-            if (!oldNode) {
+            if (!node) {
               parent.appendChild(createElement(vn))
               break
             }
-            if (containsValue(oldKeyedNodes, oldNode)) {
-              oldNode = oldNode.nextSibling
+            if (containsValue(keyedNodes, node)) {
+              node = node.nextSibling
             } else {
-              if (isSameTag(oldNode, vn)) {
-                patchAttrs(oldNode, vn.attrs)
-                patchChildren(oldNode, vn.children)
-                oldNode = oldNode.nextSibling
+              if (isSameTag(node, vn)) {
+                patchAttrs(node, vn.attrs)
+                patchChildren(node, vn.children)
+                node = node.nextSibling
               } else {
-                parent.insertBefore(createElement(vn), oldNode)
+                parent.insertBefore(createElement(vn), node)
               }
               break
             }
@@ -91,8 +91,8 @@ function patchChildren(parent, vnodes) {
     }
   })
 
-  for (const ok in oldKeyedNodes) {
-    parent.removeChild(oldKeyedNodes[ok])
+  for (const k in keyedNodes) {
+    parent.removeChild(keyedNodes[k])
   }
 
   let overCount = parent.childNodes.length - vnodes.length
@@ -109,9 +109,9 @@ function createElement(vnode) {
 }
 
 function patchAttrs(el, attrs) {
-  const oldAttrs = el.attributes
-  for (let i = oldAttrs.length - 1; i >= 0; i -= 1) {
-    const a = oldAttrs[i]
+  const elAttrs = el.attributes
+  for (let i = elAttrs.length - 1; i >= 0; i -= 1) {
+    const a = elAttrs[i]
     const n = a.name
     if (!attrs.hasOwnProperty(n) || attrs[n] == null) {
       el.removeAttribute(n)
@@ -151,10 +151,10 @@ function patchAttrs(el, attrs) {
   })
 }
 
-function isSameTag(n, v) {
+function isSameTag(n, vn) {
   return (
     n.nodeType === ELEMENT_NODE &&
-    n.nodeName.toLowerCase() === v.name.toLowerCase()
+    n.nodeName.toLowerCase() === vn.name.toLowerCase()
   )
 }
 
