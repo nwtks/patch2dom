@@ -50,7 +50,7 @@ function patchChildren(parent, vnodes) {
       } else {
         parent.appendChild(document.createTextNode(vn))
       }
-    } else if (isObject(vn)) {
+    } else if (isVNode(vn)) {
       const vnkey = vn.attrs.domkey
       const keyed = vnkey ? keyedNodes[vnkey] : null
       if (keyed) {
@@ -151,6 +151,10 @@ function patchAttrs(el, attrs) {
   })
 }
 
+function isVNode(vn) {
+  return vn && vn.name && vn.attrs && vn.children
+}
+
 function isSameTag(n, vn) {
   return (
     n.nodeType === ELEMENT_NODE &&
@@ -171,10 +175,6 @@ function containsValue(obj, v) {
     }
   }
   return false
-}
-
-function isObject(v) {
-  return v && Object.getPrototypeOf(v) === Object.prototype
 }
 
 export default patch
