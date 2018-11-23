@@ -42,7 +42,10 @@ function patchChildren(parent, vnodes) {
     if (vntype === 'string' || vntype === 'number') {
       if (node) {
         if (node.nodeType === TEXT_NODE) {
-          node.nodeValue = vn
+          const txt = '' + vn
+          if (node.nodeValue !== txt) {
+            node.nodeValue = txt
+          }
           node = node.nextSibling
         } else {
           parent.insertBefore(document.createTextNode(vn), node)
@@ -122,11 +125,10 @@ function patchAttrs(el, attrs) {
     const v = attrs[k]
     const vt = typeof v
     if (k === 'style') {
-      el.style.cssText = v
-      if (v) {
-        el.setAttribute(k, v)
-      } else {
+      if (v == null) {
         el.removeAttribute(k)
+      } else {
+        el.setAttribute(k, v)
       }
     } else if (k in el) {
       el[k] = v
