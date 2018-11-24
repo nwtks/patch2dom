@@ -11,14 +11,103 @@ function patch(parent, vnode) {
   } else if (vnode != null) {
     patchChildren(parent, [vnode]);
   } else {
-    var lastChild = parent.lastChild;
-    while (lastChild) {
-      parent.removeChild(lastChild);
-    }
+    removeChildren(parent);
   }
 }
 
 function patchChildren(parent, vnodes) {
+  if (parent.nodeName === 'TEXTAREA') {
+    return
+  }
+
+  var keyedNodes = getKeyedNodes(parent, vnodes);
+
+  var node = parent.firstChild;
+  vnodes.forEach(function (vnode) {
+    var vntype = typeof vnode;
+    if (vntype === 'string' || vntype === 'number') {
+      node = patchTextNode(parent, node, '' + vnode);
+    } else if (isVnode(vnode)) {
+      node = patchElementNode(parent, node, keyedNodes, vnode);
+    }
+  });
+
+  removeKeyedNodes(parent, keyedNodes);
+  removeOldNodes(parent, vnodes);
+}
+
+function patchTextNode(parent, node, txt) {
+  if (node) {
+    if (node.nodeType === TEXT_NODE) {
+      if (node.nodeValue !== txt) {
+        node.nodeValue = txt;
+      }
+      node = node.nextSibling;
+    } else {
+      insertBefore(parent, createTextNode(txt), node);
+    }
+  } else {
+    appendChild(parent, createTextNode(txt));
+  }
+  return node
+}
+
+function patchElementNode(parent, node, keyedNodes, vnode) {
+  var vnkey = vnode.attrs.domkey;
+  var keyed = vnkey ? keyedNodes[vnkey] : null;
+  if (keyed) {
+    delete keyedNodes[vnkey];
+    patchAttrs(keyed, vnode.attrs);
+    patchChildren(keyed, vnode.children);
+    if (keyed === node) {
+      node = node.nextSibling;
+    } else {
+      insertBefore(parent, keyed, node);
+    }
+  } else if (node) {
+    if (vnkey) {
+      insertBefore(parent, createElement(vnode), node);
+    } else {
+      for (;;) {
+        if (node) {
+          if (containsValue(keyedNodes, node)) {
+            node = node.nextSibling;
+          } else {
+            if (isSameTag(node, vnode)) {
+              patchAttrs(node, vnode.attrs);
+              patchChildren(node, vnode.children);
+              node = node.nextSibling;
+            } else {
+              insertBefore(parent, createElement(vnode), node);
+            }
+            break
+          }
+        } else {
+          appendChild(parent, createElement(vnode));
+          break
+        }
+      }
+    }
+  } else {
+    appendChild(parent, createElement(vnode));
+  }
+  return node
+}
+
+function createElement(vnode) {
+  var el = document.createElement(vnode.name);
+  patchAttrs(el, vnode.attrs);
+  patchChildren(el, vnode.children);
+  return el
+}
+
+function patchAttrs(el, attrs) {
+  removeAttrs(el, attrs);
+  Object.getOwnPropertyNames(attrs).forEach(function (k) { return updateAttr(el, k, attrs[k]); });
+  updateFormProps(el, attrs);
+}
+
+function getKeyedNodes(parent, vnodes) {
   var vnodeKeys = [];
   vnodes.forEach(function (vn) {
     if (vn && vn.attrs && vn.attrs.domkey) {
@@ -33,150 +122,135 @@ function patchChildren(parent, vnodes) {
       if (vnodeKeys.indexOf(ndKey) >= 0) {
         keyedNodes[ndKey] = nd;
       } else {
-        parent.removeChild(nd);
+        removeChild(parent, nd);
       }
     }
   }
+  return keyedNodes
+}
 
-  var node = parent.firstChild;
-  vnodes.forEach(function (vn) {
-    var vntype = typeof vn;
-    if (vntype === 'string' || vntype === 'number') {
-      if (node) {
-        if (node.nodeType === TEXT_NODE) {
-          var txt = '' + vn;
-          if (node.nodeValue !== txt) {
-            node.nodeValue = txt;
-          }
-          node = node.nextSibling;
-        } else {
-          parent.insertBefore(document.createTextNode(vn), node);
-        }
-      } else {
-        parent.appendChild(document.createTextNode(vn));
-      }
-    } else if (isVNode(vn)) {
-      var vnkey = vn.attrs.domkey;
-      var keyed = vnkey ? keyedNodes[vnkey] : null;
-      if (keyed) {
-        delete keyedNodes[vnkey];
-        if (keyed === node) {
-          node = node.nextSibling;
-        } else {
-          parent.insertBefore(keyed, node);
-        }
-        patchAttrs(keyed, vn.attrs);
-        patchChildren(keyed, vn.children);
-      } else if (node) {
-        if (vnkey) {
-          parent.insertBefore(createElement(vn), node);
-        } else {
-          while (true) {
-            if (!node) {
-              parent.appendChild(createElement(vn));
-              break
-            }
-            if (containsValue(keyedNodes, node)) {
-              node = node.nextSibling;
-            } else {
-              if (isSameTag(node, vn)) {
-                patchAttrs(node, vn.attrs);
-                patchChildren(node, vn.children);
-                node = node.nextSibling;
-              } else {
-                parent.insertBefore(createElement(vn), node);
-              }
-              break
-            }
-          }
-        }
-      } else {
-        parent.appendChild(createElement(vn));
-      }
-    }
-  });
-
+function removeKeyedNodes(parent, keyedNodes) {
   for (var k in keyedNodes) {
-    parent.removeChild(keyedNodes[k]);
-  }
-
-  var overCount = parent.childNodes.length - vnodes.length;
-  while (--overCount >= 0) {
-    parent.removeChild(parent.lastChild);
+    removeChild(parent, keyedNodes[k]);
   }
 }
 
-function createElement(vnode) {
-  var el = document.createElement(vnode.name);
-  patchAttrs(el, vnode.attrs);
-  patchChildren(el, vnode.children);
-  return el
+function removeOldNodes(parent, vnodes) {
+  for (
+    var overCount = parent.childNodes.length - vnodes.length;
+    overCount > 0;
+    --overCount
+  ) {
+    removeChild(parent, parent.lastChild);
+  }
 }
 
-function patchAttrs(el, attrs) {
+function updateAttr(el, name, value) {
+  var vtype = typeof value;
+  if (name === 'style') {
+    updateAttribute(el, name, value);
+  } else if (name in el) {
+    updateProp(el, name, value);
+    updateBooleanAttribute(el, name.toLowerCase(), value);
+  } else if (vtype === 'function' || (name[0] === 'o' && name[1] === 'n')) {
+    updateProp(el, name, value);
+  } else if (vtype === 'boolean') {
+    updateBooleanAttribute(el, name, value);
+  } else {
+    updateAttribute(el, name, value);
+  }
+}
+
+function updateFormProps(el, attrs) {
+  var name = el.nodeName;
+  var value = attrs.value == null ? '' : '' + attrs.value;
+  var checked = !!attrs.checked;
+  var selected = !!attrs.selected;
+  if (name === 'INPUT') {
+    updateProp(el, 'checked', checked);
+    updateBooleanAttribute(el, 'checked', checked);
+    updateProp(el, 'value', value);
+    updateAttribute(el, 'value', attrs.value);
+  } else if (name === 'TEXTAREA') {
+    updateProp(el, 'value', value);
+  } else if (name === 'OPTION') {
+    updateProp(el, 'selected', selected);
+    updateBooleanAttribute(el, 'selected', selected);
+  }
+}
+
+function removeAttrs(el, attrs) {
   var elAttrs = el.attributes;
-  for (var i = elAttrs.length - 1; i >= 0; i -= 1) {
+  for (var i = elAttrs.length - 1; i >= 0; --i) {
     var a = elAttrs[i];
     var n = a.name;
     if (!attrs.hasOwnProperty(n) || attrs[n] == null) {
-      el.removeAttribute(n);
+      removeAttribute(el, n);
     }
   }
-
-  Object.getOwnPropertyNames(attrs).forEach(function (k) {
-    var v = attrs[k];
-    var vt = typeof v;
-    if (k === 'style') {
-      if (v == null) {
-        el.removeAttribute(k);
-      } else {
-        el.setAttribute(k, v);
-      }
-    } else if (k in el) {
-      el[k] = v;
-      if (v === true) {
-        el.setAttribute(k.toLowerCase(), '');
-      } else if (v === false) {
-        el.removeAttribute(k.toLowerCase());
-      }
-      if (k === 'value') {
-        if (v == null) {
-          el.removeAttribute(k);
-        } else {
-          el.setAttribute(k, v);
-        }
-      }
-    } else if (vt === 'function' || (k[0] === 'o' && k[1] === 'n')) {
-      el[k] = v;
-    } else if (vt === 'boolean') {
-      if (v === true) {
-        el.setAttribute(k, '');
-      } else {
-        el.removeAttribute(k);
-      }
-    } else if (v == null) {
-      el.removeAttribute(k);
-    } else {
-      el.setAttribute(k, v);
-    }
-  });
 }
 
-function isVNode(vn) {
-  return vn && vn.name && vn.attrs && vn.children
+function updateAttribute(el, name, value) {
+  if (value == null) {
+    removeAttribute(el, name);
+  } else if (value !== el.getAttribute(name)) {
+    el.setAttribute(name, value);
+  }
 }
 
-function isSameTag(n, vn) {
+function updateBooleanAttribute(el, name, value) {
+  if (value === true) {
+    updateAttribute(el, name, '');
+  } else if (value === false) {
+    removeAttribute(el, name);
+  }
+}
+
+function isVnode(vnode) {
+  return vnode && vnode.name && vnode.attrs && vnode.children
+}
+
+function isSameTag(node, vnode) {
   return (
-    n.nodeType === ELEMENT_NODE &&
-    n.nodeName.toLowerCase() === vn.name.toLowerCase()
+    node.nodeType === ELEMENT_NODE &&
+    node.nodeName.toLowerCase() === vnode.name.toLowerCase()
   )
 }
 
-function getKey(n) {
-  if (n.nodeType === ELEMENT_NODE) {
-    return n.getAttribute('domkey')
+function getKey(node) {
+  if (node.nodeType === ELEMENT_NODE) {
+    return node.getAttribute('domkey')
   }
+}
+
+function removeChildren(parent) {
+  for (
+    var lastChild = parent.lastChild;
+    lastChild;
+    lastChild = parent.lastChild
+  ) {
+    removeChild(parent, lastChild);
+  }
+}
+
+function appendChild(parent, node) {
+  parent.appendChild(node);
+}
+
+function insertBefore(parent, node, position) {
+  parent.insertBefore(node, position);
+}
+
+function removeChild(parent, node) {
+  parent.removeChild(node);
+}
+
+function createTextNode(txt) {
+  return document.createTextNode(txt)
+}
+
+function removeAttribute(el, name) {
+  el.removeAttribute(name);
 }
 
 function containsValue(obj, v) {
@@ -186,6 +260,12 @@ function containsValue(obj, v) {
     }
   }
   return false
+}
+
+function updateProp(obj, key, value) {
+  if (value !== obj[key]) {
+    obj[key] = value;
+  }
 }
 
 module.exports = patch;
