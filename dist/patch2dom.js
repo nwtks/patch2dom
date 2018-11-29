@@ -151,7 +151,9 @@ function updateAttr(el, name, value) {
     updateAttribute(el, name, value);
   } else if (name in el) {
     updateProp(el, name, value);
-    updateBooleanAttribute(el, name.toLowerCase(), value);
+    if (vtype === 'boolean') {
+      updateBooleanAttribute(el, name.toLowerCase(), value);
+    }
   } else if (vtype === 'function' || (name[0] === 'o' && name[1] === 'n')) {
     updateProp(el, name, value);
   } else if (vtype === 'boolean') {
@@ -199,10 +201,16 @@ function updateAttribute(el, name, value) {
 }
 
 function updateBooleanAttribute(el, name, value) {
-  if (value === true) {
-    updateAttribute(el, name, '');
+  if (value === true && !el.hasAttribute(name)) {
+    el.setAttribute(name, '');
   } else if (value === false) {
     removeAttribute(el, name);
+  }
+}
+
+function removeAttribute(el, name) {
+  if (el.hasAttribute(name)) {
+    el.removeAttribute(name);
   }
 }
 
@@ -247,10 +255,6 @@ function removeChild(parent, node) {
 
 function createTextNode(txt) {
   return document.createTextNode(txt)
-}
-
-function removeAttribute(el, name) {
-  el.removeAttribute(name);
 }
 
 function containsValue(obj, v) {
