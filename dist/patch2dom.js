@@ -152,7 +152,7 @@ function updateAttr(el, name, value) {
   } else if (name in el) {
     updateProp(el, name, value);
     if (vtype === 'boolean') {
-      updateBooleanAttribute(el, name.toLowerCase(), value);
+      updateBooleanAttribute(el, name, value);
     }
   } else if (vtype === 'function' || (name[0] === 'o' && name[1] === 'n')) {
     updateProp(el, name, value);
