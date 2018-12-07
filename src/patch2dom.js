@@ -2,8 +2,9 @@ const ELEMENT_NODE = 1
 const TEXT_NODE = 3
 
 const isArray = Array.isArray
+const getOwnPropertyNames = Object.getOwnPropertyNames
 
-function patch(parent, vnode) {
+const patch = (parent, vnode) => {
   if (isArray(vnode)) {
     patchChildren(parent, vnode)
   } else if (vnode != null) {
@@ -13,7 +14,7 @@ function patch(parent, vnode) {
   }
 }
 
-function patchChildren(parent, vnodes) {
+const patchChildren = (parent, vnodes) => {
   if (parent.nodeName === 'TEXTAREA') {
     return
   }
@@ -34,7 +35,7 @@ function patchChildren(parent, vnodes) {
   removeOldNodes(parent, vnodes)
 }
 
-function patchTextNode(parent, node, txt) {
+const patchTextNode = (parent, node, txt) => {
   if (node) {
     if (node.nodeType === TEXT_NODE) {
       if (node.nodeValue !== txt) {
@@ -50,7 +51,7 @@ function patchTextNode(parent, node, txt) {
   return node
 }
 
-function patchElementNode(parent, node, keyedNodes, vnode) {
+const patchElementNode = (parent, node, keyedNodes, vnode) => {
   const vnkey = vnode.attrs.domkey
   const keyed = vnkey ? keyedNodes[vnkey] : null
   if (keyed) {
@@ -92,26 +93,26 @@ function patchElementNode(parent, node, keyedNodes, vnode) {
   return node
 }
 
-function createElement(vnode) {
+const createElement = vnode => {
   const el = document.createElement(vnode.name)
   patchAttrs(el, vnode.attrs)
   patchChildren(el, vnode.children)
   return el
 }
 
-function patchAttrs(el, attrs) {
+const patchAttrs = (el, attrs) => {
   removeAttrs(el, attrs)
-  Object.getOwnPropertyNames(attrs).forEach(k => updateAttr(el, k, attrs[k]))
+  getOwnPropertyNames(attrs).forEach(k => updateAttr(el, k, attrs[k]))
   updateFormProps(el, attrs)
 }
 
-function getKeyedNodes(parent, vnodes) {
+const getKeyedNodes = (parent, vnodes) => {
   const vnodeKeys = []
-  vnodes.forEach(vn => {
-    if (vn && vn.attrs && vn.attrs.domkey) {
+  vnodes
+    .filter(vn => vn && vn.attrs && vn.attrs.domkey)
+    .forEach(vn => {
       vnodeKeys.push(vn.attrs.domkey)
-    }
-  })
+    })
 
   const keyedNodes = Object.create(null)
   for (let nd = parent.firstChild; nd; nd = nd.nextSibling) {
@@ -127,23 +128,22 @@ function getKeyedNodes(parent, vnodes) {
   return keyedNodes
 }
 
-function removeKeyedNodes(parent, keyedNodes) {
-  for (const k in keyedNodes) {
+const removeKeyedNodes = (parent, keyedNodes) =>
+  getOwnPropertyNames(keyedNodes).forEach(k =>
     removeChild(parent, keyedNodes[k])
-  }
-}
+  )
 
-function removeOldNodes(parent, vnodes) {
+const removeOldNodes = (parent, vnodes) => {
   for (
     let overCount = parent.childNodes.length - vnodes.length;
     overCount > 0;
-    --overCount
+    overCount -= 1
   ) {
     removeChild(parent, parent.lastChild)
   }
 }
 
-function updateAttr(el, name, value) {
+const updateAttr = (el, name, value) => {
   const vtype = typeof value
   if (name === 'style') {
     updateAttribute(el, name, value)
@@ -161,7 +161,7 @@ function updateAttr(el, name, value) {
   }
 }
 
-function updateFormProps(el, attrs) {
+const updateFormProps = (el, attrs) => {
   const name = el.nodeName
   const value = attrs.value == null ? '' : '' + attrs.value
   const checked = !!attrs.checked
@@ -179,9 +179,9 @@ function updateFormProps(el, attrs) {
   }
 }
 
-function removeAttrs(el, attrs) {
+const removeAttrs = (el, attrs) => {
   const elAttrs = el.attributes
-  for (let i = elAttrs.length - 1; i >= 0; --i) {
+  for (let i = elAttrs.length - 1; i >= 0; i -= 1) {
     const a = elAttrs[i]
     const n = a.name
     if (!attrs.hasOwnProperty(n) || attrs[n] == null) {
@@ -190,7 +190,7 @@ function removeAttrs(el, attrs) {
   }
 }
 
-function updateAttribute(el, name, value) {
+const updateAttribute = (el, name, value) => {
   if (value == null) {
     removeAttribute(el, name)
   } else if (value !== el.getAttribute(name)) {
@@ -198,7 +198,7 @@ function updateAttribute(el, name, value) {
   }
 }
 
-function updateBooleanAttribute(el, name, value) {
+const updateBooleanAttribute = (el, name, value) => {
   if (value === true && !el.hasAttribute(name)) {
     el.setAttribute(name, '')
   } else if (value === false) {
@@ -206,30 +206,22 @@ function updateBooleanAttribute(el, name, value) {
   }
 }
 
-function removeAttribute(el, name) {
+const removeAttribute = (el, name) => {
   if (el.hasAttribute(name)) {
     el.removeAttribute(name)
   }
 }
 
-function isVnode(vnode) {
-  return vnode && vnode.name && vnode.attrs && vnode.children
-}
+const isVnode = vnode => vnode && vnode.name && vnode.attrs && vnode.children
 
-function isSameTag(node, vnode) {
-  return (
-    node.nodeType === ELEMENT_NODE &&
-    node.nodeName.toLowerCase() === vnode.name.toLowerCase()
-  )
-}
+const isSameTag = (node, vnode) =>
+  node.nodeType === ELEMENT_NODE &&
+  node.nodeName.toLowerCase() === vnode.name.toLowerCase()
 
-function getKey(node) {
-  if (node.nodeType === ELEMENT_NODE) {
-    return node.getAttribute('domkey')
-  }
-}
+const getKey = node =>
+  node.nodeType === ELEMENT_NODE ? node.getAttribute('domkey') : null
 
-function removeChildren(parent) {
+const removeChildren = parent => {
   for (
     let lastChild = parent.lastChild;
     lastChild;
@@ -239,32 +231,20 @@ function removeChildren(parent) {
   }
 }
 
-function appendChild(parent, node) {
-  parent.appendChild(node)
-}
+const appendChild = (parent, node) => parent.appendChild(node)
 
-function insertBefore(parent, node, position) {
+const insertBefore = (parent, node, position) =>
   parent.insertBefore(node, position)
-}
 
-function removeChild(parent, node) {
-  parent.removeChild(node)
-}
+const removeChild = (parent, node) => parent.removeChild(node)
 
-function createTextNode(txt) {
-  return document.createTextNode(txt)
-}
+const createTextNode = txt => document.createTextNode(txt)
 
-function containsValue(obj, v) {
-  for (const k in obj) {
-    if (obj[k] === v) {
-      return true
-    }
-  }
-  return false
-}
+const containsValue = (obj, v) =>
+  obj != null &&
+  getOwnPropertyNames(obj).reduce((a, k) => (obj[k] === v ? true : a), false)
 
-function updateProp(obj, key, value) {
+const updateProp = (obj, key, value) => {
   if (value !== obj[key]) {
     obj[key] = value
   }

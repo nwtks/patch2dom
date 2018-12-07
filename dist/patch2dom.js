@@ -4,8 +4,9 @@ var ELEMENT_NODE = 1;
 var TEXT_NODE = 3;
 
 var isArray = Array.isArray;
+var getOwnPropertyNames = Object.getOwnPropertyNames;
 
-function patch(parent, vnode) {
+var patch = function (parent, vnode) {
   if (isArray(vnode)) {
     patchChildren(parent, vnode);
   } else if (vnode != null) {
@@ -13,9 +14,9 @@ function patch(parent, vnode) {
   } else {
     removeChildren(parent);
   }
-}
+};
 
-function patchChildren(parent, vnodes) {
+var patchChildren = function (parent, vnodes) {
   if (parent.nodeName === 'TEXTAREA') {
     return
   }
@@ -34,9 +35,9 @@ function patchChildren(parent, vnodes) {
 
   removeKeyedNodes(parent, keyedNodes);
   removeOldNodes(parent, vnodes);
-}
+};
 
-function patchTextNode(parent, node, txt) {
+var patchTextNode = function (parent, node, txt) {
   if (node) {
     if (node.nodeType === TEXT_NODE) {
       if (node.nodeValue !== txt) {
@@ -50,9 +51,9 @@ function patchTextNode(parent, node, txt) {
     appendChild(parent, createTextNode(txt));
   }
   return node
-}
+};
 
-function patchElementNode(parent, node, keyedNodes, vnode) {
+var patchElementNode = function (parent, node, keyedNodes, vnode) {
   var vnkey = vnode.attrs.domkey;
   var keyed = vnkey ? keyedNodes[vnkey] : null;
   if (keyed) {
@@ -92,28 +93,28 @@ function patchElementNode(parent, node, keyedNodes, vnode) {
     appendChild(parent, createElement(vnode));
   }
   return node
-}
+};
 
-function createElement(vnode) {
+var createElement = function (vnode) {
   var el = document.createElement(vnode.name);
   patchAttrs(el, vnode.attrs);
   patchChildren(el, vnode.children);
   return el
-}
+};
 
-function patchAttrs(el, attrs) {
+var patchAttrs = function (el, attrs) {
   removeAttrs(el, attrs);
-  Object.getOwnPropertyNames(attrs).forEach(function (k) { return updateAttr(el, k, attrs[k]); });
+  getOwnPropertyNames(attrs).forEach(function (k) { return updateAttr(el, k, attrs[k]); });
   updateFormProps(el, attrs);
-}
+};
 
-function getKeyedNodes(parent, vnodes) {
+var getKeyedNodes = function (parent, vnodes) {
   var vnodeKeys = [];
-  vnodes.forEach(function (vn) {
-    if (vn && vn.attrs && vn.attrs.domkey) {
+  vnodes
+    .filter(function (vn) { return vn && vn.attrs && vn.attrs.domkey; })
+    .forEach(function (vn) {
       vnodeKeys.push(vn.attrs.domkey);
-    }
-  });
+    });
 
   var keyedNodes = Object.create(null);
   for (var nd = parent.firstChild; nd; nd = nd.nextSibling) {
@@ -127,25 +128,22 @@ function getKeyedNodes(parent, vnodes) {
     }
   }
   return keyedNodes
-}
+};
 
-function removeKeyedNodes(parent, keyedNodes) {
-  for (var k in keyedNodes) {
-    removeChild(parent, keyedNodes[k]);
-  }
-}
+var removeKeyedNodes = function (parent, keyedNodes) { return getOwnPropertyNames(keyedNodes).forEach(function (k) { return removeChild(parent, keyedNodes[k]); }
+  ); };
 
-function removeOldNodes(parent, vnodes) {
+var removeOldNodes = function (parent, vnodes) {
   for (
     var overCount = parent.childNodes.length - vnodes.length;
     overCount > 0;
-    --overCount
+    overCount -= 1
   ) {
     removeChild(parent, parent.lastChild);
   }
-}
+};
 
-function updateAttr(el, name, value) {
+var updateAttr = function (el, name, value) {
   var vtype = typeof value;
   if (name === 'style') {
     updateAttribute(el, name, value);
@@ -161,9 +159,9 @@ function updateAttr(el, name, value) {
   } else {
     updateAttribute(el, name, value);
   }
-}
+};
 
-function updateFormProps(el, attrs) {
+var updateFormProps = function (el, attrs) {
   var name = el.nodeName;
   var value = attrs.value == null ? '' : '' + attrs.value;
   var checked = !!attrs.checked;
@@ -179,59 +177,49 @@ function updateFormProps(el, attrs) {
     updateProp(el, 'selected', selected);
     updateBooleanAttribute(el, 'selected', selected);
   }
-}
+};
 
-function removeAttrs(el, attrs) {
+var removeAttrs = function (el, attrs) {
   var elAttrs = el.attributes;
-  for (var i = elAttrs.length - 1; i >= 0; --i) {
+  for (var i = elAttrs.length - 1; i >= 0; i -= 1) {
     var a = elAttrs[i];
     var n = a.name;
     if (!attrs.hasOwnProperty(n) || attrs[n] == null) {
       removeAttribute(el, n);
     }
   }
-}
+};
 
-function updateAttribute(el, name, value) {
+var updateAttribute = function (el, name, value) {
   if (value == null) {
     removeAttribute(el, name);
   } else if (value !== el.getAttribute(name)) {
     el.setAttribute(name, value);
   }
-}
+};
 
-function updateBooleanAttribute(el, name, value) {
+var updateBooleanAttribute = function (el, name, value) {
   if (value === true && !el.hasAttribute(name)) {
     el.setAttribute(name, '');
   } else if (value === false) {
     removeAttribute(el, name);
   }
-}
+};
 
-function removeAttribute(el, name) {
+var removeAttribute = function (el, name) {
   if (el.hasAttribute(name)) {
     el.removeAttribute(name);
   }
-}
+};
 
-function isVnode(vnode) {
-  return vnode && vnode.name && vnode.attrs && vnode.children
-}
+var isVnode = function (vnode) { return vnode && vnode.name && vnode.attrs && vnode.children; };
 
-function isSameTag(node, vnode) {
-  return (
-    node.nodeType === ELEMENT_NODE &&
-    node.nodeName.toLowerCase() === vnode.name.toLowerCase()
-  )
-}
+var isSameTag = function (node, vnode) { return node.nodeType === ELEMENT_NODE &&
+  node.nodeName.toLowerCase() === vnode.name.toLowerCase(); };
 
-function getKey(node) {
-  if (node.nodeType === ELEMENT_NODE) {
-    return node.getAttribute('domkey')
-  }
-}
+var getKey = function (node) { return node.nodeType === ELEMENT_NODE ? node.getAttribute('domkey') : null; };
 
-function removeChildren(parent) {
+var removeChildren = function (parent) {
   for (
     var lastChild = parent.lastChild;
     lastChild;
@@ -239,37 +227,23 @@ function removeChildren(parent) {
   ) {
     removeChild(parent, lastChild);
   }
-}
+};
 
-function appendChild(parent, node) {
-  parent.appendChild(node);
-}
+var appendChild = function (parent, node) { return parent.appendChild(node); };
 
-function insertBefore(parent, node, position) {
-  parent.insertBefore(node, position);
-}
+var insertBefore = function (parent, node, position) { return parent.insertBefore(node, position); };
 
-function removeChild(parent, node) {
-  parent.removeChild(node);
-}
+var removeChild = function (parent, node) { return parent.removeChild(node); };
 
-function createTextNode(txt) {
-  return document.createTextNode(txt)
-}
+var createTextNode = function (txt) { return document.createTextNode(txt); };
 
-function containsValue(obj, v) {
-  for (var k in obj) {
-    if (obj[k] === v) {
-      return true
-    }
-  }
-  return false
-}
+var containsValue = function (obj, v) { return obj != null &&
+  getOwnPropertyNames(obj).reduce(function (a, k) { return (obj[k] === v ? true : a); }, false); };
 
-function updateProp(obj, key, value) {
+var updateProp = function (obj, key, value) {
   if (value !== obj[key]) {
     obj[key] = value;
   }
-}
+};
 
 module.exports = patch;
