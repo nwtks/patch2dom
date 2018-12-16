@@ -5,6 +5,7 @@ var TEXT_NODE = 3;
 
 var isArray = Array.isArray;
 var getOwnPropertyNames = Object.getOwnPropertyNames;
+var slice = Array.prototype.slice;
 
 var patch = function (parent, vnode) {
   if (isArray(vnode)) {
@@ -95,6 +96,34 @@ var patchElementNode = function (parent, node, keyedNodes, vnode) {
   return node
 };
 
+var getKeyedNodes = function (parent, vnodes) {
+  var vnodeKeys = [];
+  vnodes
+    .filter(function (vnode) { return vnode && vnode.attrs && vnode.attrs.domkey; })
+    .forEach(function (vnode) { return vnodeKeys.push(vnode.attrs.domkey); });
+
+  var keyedNodes = Object.create(null);
+  walkChildren(parent, function (node) {
+    var nodeKey = getKey(node);
+    if (nodeKey) {
+      if (vnodeKeys.indexOf(nodeKey) >= 0) {
+        keyedNodes[nodeKey] = node;
+      } else {
+        removeChild(parent, node);
+      }
+    }
+  });
+  return keyedNodes
+};
+
+var removeKeyedNodes = function (parent, keyedNodes) { return getOwnPropertyNames(keyedNodes).forEach(function (k) { return removeChild(parent, keyedNodes[k]); }
+  ); };
+
+var removeOldNodes = function (parent, vnodes) {
+  times(parent.childNodes.length - vnodes.length, function () { return removeChild(parent, parent.lastChild); }
+  );
+};
+
 var createElement = function (vnode) {
   var el = document.createElement(vnode.name);
   patchAttrs(el, vnode.attrs);
@@ -108,39 +137,13 @@ var patchAttrs = function (el, attrs) {
   updateFormProps(el, attrs);
 };
 
-var getKeyedNodes = function (parent, vnodes) {
-  var vnodeKeys = [];
-  vnodes
-    .filter(function (vn) { return vn && vn.attrs && vn.attrs.domkey; })
-    .forEach(function (vn) {
-      vnodeKeys.push(vn.attrs.domkey);
-    });
-
-  var keyedNodes = Object.create(null);
-  for (var nd = parent.firstChild; nd; nd = nd.nextSibling) {
-    var ndKey = getKey(nd);
-    if (ndKey) {
-      if (vnodeKeys.indexOf(ndKey) >= 0) {
-        keyedNodes[ndKey] = nd;
-      } else {
-        removeChild(parent, nd);
-      }
+var removeAttrs = function (el, attrs) {
+  slice.call(el.attributes).forEach(function (a) {
+    var n = a.name;
+    if (!attrs.hasOwnProperty(n) || attrs[n] == null) {
+      removeAttribute(el, n);
     }
-  }
-  return keyedNodes
-};
-
-var removeKeyedNodes = function (parent, keyedNodes) { return getOwnPropertyNames(keyedNodes).forEach(function (k) { return removeChild(parent, keyedNodes[k]); }
-  ); };
-
-var removeOldNodes = function (parent, vnodes) {
-  for (
-    var overCount = parent.childNodes.length - vnodes.length;
-    overCount > 0;
-    overCount -= 1
-  ) {
-    removeChild(parent, parent.lastChild);
-  }
+  });
 };
 
 var updateAttr = function (el, name, value) {
@@ -176,17 +179,6 @@ var updateFormProps = function (el, attrs) {
   } else if (name === 'OPTION') {
     updateProp(el, 'selected', selected);
     updateBooleanAttribute(el, 'selected', selected);
-  }
-};
-
-var removeAttrs = function (el, attrs) {
-  var elAttrs = el.attributes;
-  for (var i = elAttrs.length - 1; i >= 0; i -= 1) {
-    var a = elAttrs[i];
-    var n = a.name;
-    if (!attrs.hasOwnProperty(n) || attrs[n] == null) {
-      removeAttribute(el, n);
-    }
   }
 };
 
@@ -237,12 +229,23 @@ var removeChild = function (parent, node) { return parent.removeChild(node); };
 
 var createTextNode = function (txt) { return document.createTextNode(txt); };
 
-var containsValue = function (obj, v) { return obj != null &&
-  getOwnPropertyNames(obj).reduce(function (a, k) { return (obj[k] === v ? true : a); }, false); };
+var containsValue = function (obj, value) { return obj != null && getOwnPropertyNames(obj).some(function (k) { return obj[k] === value; }); };
 
 var updateProp = function (obj, key, value) {
   if (value !== obj[key]) {
     obj[key] = value;
+  }
+};
+
+var walkChildren = function (node, callback) {
+  for (var c = node.firstChild; c; c = c.nextSibling) {
+    callback(c);
+  }
+};
+
+var times = function (n, callback) {
+  for (var i = 0; i < n; i += 1) {
+    callback(i);
   }
 };
 

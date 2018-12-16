@@ -3,6 +3,7 @@ const TEXT_NODE = 3
 
 const isArray = Array.isArray
 const getOwnPropertyNames = Object.getOwnPropertyNames
+const slice = Array.prototype.slice
 
 const patch = (parent, vnode) => {
   if (isArray(vnode)) {
@@ -93,6 +94,37 @@ const patchElementNode = (parent, node, keyedNodes, vnode) => {
   return node
 }
 
+const getKeyedNodes = (parent, vnodes) => {
+  const vnodeKeys = []
+  vnodes
+    .filter(vnode => vnode && vnode.attrs && vnode.attrs.domkey)
+    .forEach(vnode => vnodeKeys.push(vnode.attrs.domkey))
+
+  const keyedNodes = Object.create(null)
+  walkChildren(parent, node => {
+    const nodeKey = getKey(node)
+    if (nodeKey) {
+      if (vnodeKeys.indexOf(nodeKey) >= 0) {
+        keyedNodes[nodeKey] = node
+      } else {
+        removeChild(parent, node)
+      }
+    }
+  })
+  return keyedNodes
+}
+
+const removeKeyedNodes = (parent, keyedNodes) =>
+  getOwnPropertyNames(keyedNodes).forEach(k =>
+    removeChild(parent, keyedNodes[k])
+  )
+
+const removeOldNodes = (parent, vnodes) => {
+  times(parent.childNodes.length - vnodes.length, () =>
+    removeChild(parent, parent.lastChild)
+  )
+}
+
 const createElement = vnode => {
   const el = document.createElement(vnode.name)
   patchAttrs(el, vnode.attrs)
@@ -106,41 +138,13 @@ const patchAttrs = (el, attrs) => {
   updateFormProps(el, attrs)
 }
 
-const getKeyedNodes = (parent, vnodes) => {
-  const vnodeKeys = []
-  vnodes
-    .filter(vn => vn && vn.attrs && vn.attrs.domkey)
-    .forEach(vn => {
-      vnodeKeys.push(vn.attrs.domkey)
-    })
-
-  const keyedNodes = Object.create(null)
-  for (let nd = parent.firstChild; nd; nd = nd.nextSibling) {
-    const ndKey = getKey(nd)
-    if (ndKey) {
-      if (vnodeKeys.indexOf(ndKey) >= 0) {
-        keyedNodes[ndKey] = nd
-      } else {
-        removeChild(parent, nd)
-      }
+const removeAttrs = (el, attrs) => {
+  slice.call(el.attributes).forEach(a => {
+    const n = a.name
+    if (!attrs.hasOwnProperty(n) || attrs[n] == null) {
+      removeAttribute(el, n)
     }
-  }
-  return keyedNodes
-}
-
-const removeKeyedNodes = (parent, keyedNodes) =>
-  getOwnPropertyNames(keyedNodes).forEach(k =>
-    removeChild(parent, keyedNodes[k])
-  )
-
-const removeOldNodes = (parent, vnodes) => {
-  for (
-    let overCount = parent.childNodes.length - vnodes.length;
-    overCount > 0;
-    overCount -= 1
-  ) {
-    removeChild(parent, parent.lastChild)
-  }
+  })
 }
 
 const updateAttr = (el, name, value) => {
@@ -176,17 +180,6 @@ const updateFormProps = (el, attrs) => {
   } else if (name === 'OPTION') {
     updateProp(el, 'selected', selected)
     updateBooleanAttribute(el, 'selected', selected)
-  }
-}
-
-const removeAttrs = (el, attrs) => {
-  const elAttrs = el.attributes
-  for (let i = elAttrs.length - 1; i >= 0; i -= 1) {
-    const a = elAttrs[i]
-    const n = a.name
-    if (!attrs.hasOwnProperty(n) || attrs[n] == null) {
-      removeAttribute(el, n)
-    }
   }
 }
 
@@ -240,13 +233,24 @@ const removeChild = (parent, node) => parent.removeChild(node)
 
 const createTextNode = txt => document.createTextNode(txt)
 
-const containsValue = (obj, v) =>
-  obj != null &&
-  getOwnPropertyNames(obj).reduce((a, k) => (obj[k] === v ? true : a), false)
+const containsValue = (obj, value) =>
+  obj != null && getOwnPropertyNames(obj).some(k => obj[k] === value)
 
 const updateProp = (obj, key, value) => {
   if (value !== obj[key]) {
     obj[key] = value
+  }
+}
+
+const walkChildren = (node, callback) => {
+  for (let c = node.firstChild; c; c = c.nextSibling) {
+    callback(c)
+  }
+}
+
+const times = (n, callback) => {
+  for (let i = 0; i < n; i += 1) {
+    callback(i)
   }
 }
 
