@@ -5,7 +5,8 @@ var TEXT_NODE = 3;
 
 var isArray = Array.isArray;
 var getOwnPropertyNames = Object.getOwnPropertyNames;
-var slice = Array.prototype.slice;
+var ref = Array.prototype;
+var slice = ref.slice;
 
 var patch = function (parent, vnode) {
   if (isArray(vnode)) {
@@ -19,7 +20,7 @@ var patch = function (parent, vnode) {
 
 var patchChildren = function (parent, vnodes) {
   if (parent.nodeName === 'TEXTAREA') {
-    return
+    return;
   }
 
   var keyedNodes = getKeyedNodes(parent, vnodes);
@@ -41,9 +42,7 @@ var patchChildren = function (parent, vnodes) {
 var patchTextNode = function (parent, node, txt) {
   if (node) {
     if (node.nodeType === TEXT_NODE) {
-      if (node.nodeValue !== txt) {
-        node.nodeValue = txt;
-      }
+      node.nodeValue !== txt && (node.nodeValue = txt);
       node = node.nextSibling;
     } else {
       insertBefore(parent, createTextNode(txt), node);
@@ -51,7 +50,7 @@ var patchTextNode = function (parent, node, txt) {
   } else {
     appendChild(parent, createTextNode(txt));
   }
-  return node
+  return node;
 };
 
 var patchElementNode = function (parent, node, keyedNodes, vnode) {
@@ -82,25 +81,27 @@ var patchElementNode = function (parent, node, keyedNodes, vnode) {
             } else {
               insertBefore(parent, createElement(vnode), node);
             }
-            break
+            break;
           }
         } else {
           appendChild(parent, createElement(vnode));
-          break
+          break;
         }
       }
     }
   } else {
     appendChild(parent, createElement(vnode));
   }
-  return node
+  return node;
 };
 
 var getKeyedNodes = function (parent, vnodes) {
   var vnodeKeys = [];
   vnodes
     .filter(function (vnode) { return vnode && vnode.attrs && vnode.attrs.domkey; })
-    .forEach(function (vnode) { return vnodeKeys.push(vnode.attrs.domkey); });
+    .forEach(function (vnode) {
+      vnodeKeys.push(vnode.attrs.domkey);
+    });
 
   var keyedNodes = Object.create(null);
   walkChildren(parent, function (node) {
@@ -113,27 +114,33 @@ var getKeyedNodes = function (parent, vnodes) {
       }
     }
   });
-  return keyedNodes
+  return keyedNodes;
 };
 
-var removeKeyedNodes = function (parent, keyedNodes) { return getOwnPropertyNames(keyedNodes).forEach(function (k) { return removeChild(parent, keyedNodes[k]); }
-  ); };
+var removeKeyedNodes = function (parent, keyedNodes) {
+  getOwnPropertyNames(keyedNodes).forEach(function (k) {
+    removeChild(parent, keyedNodes[k]);
+  });
+};
 
 var removeOldNodes = function (parent, vnodes) {
-  times(parent.childNodes.length - vnodes.length, function () { return removeChild(parent, parent.lastChild); }
-  );
+  times(parent.childNodes.length - vnodes.length, function () {
+    removeChild(parent, parent.lastChild);
+  });
 };
 
 var createElement = function (vnode) {
   var el = document.createElement(vnode.name);
   patchAttrs(el, vnode.attrs);
   patchChildren(el, vnode.children);
-  return el
+  return el;
 };
 
 var patchAttrs = function (el, attrs) {
   removeAttrs(el, attrs);
-  getOwnPropertyNames(attrs).forEach(function (k) { return updateAttr(el, k, attrs[k]); });
+  getOwnPropertyNames(attrs).forEach(function (k) {
+    updateAttr(el, k, attrs[k]);
+  });
   updateFormProps(el, attrs);
 };
 
@@ -199,9 +206,7 @@ var updateBooleanAttribute = function (el, name, value) {
 };
 
 var removeAttribute = function (el, name) {
-  if (el.hasAttribute(name)) {
-    el.removeAttribute(name);
-  }
+  el.hasAttribute(name) && el.removeAttribute(name);
 };
 
 var isVnode = function (vnode) { return vnode && vnode.name && vnode.attrs && vnode.children; };
@@ -221,20 +226,24 @@ var removeChildren = function (parent) {
   }
 };
 
-var appendChild = function (parent, node) { return parent.appendChild(node); };
+var appendChild = function (parent, node) {
+  parent.appendChild(node);
+};
 
-var insertBefore = function (parent, node, position) { return parent.insertBefore(node, position); };
+var insertBefore = function (parent, node, position) {
+  parent.insertBefore(node, position);
+};
 
-var removeChild = function (parent, node) { return parent.removeChild(node); };
+var removeChild = function (parent, node) {
+  parent.removeChild(node);
+};
 
 var createTextNode = function (txt) { return document.createTextNode(txt); };
 
 var containsValue = function (obj, value) { return obj != null && getOwnPropertyNames(obj).some(function (k) { return obj[k] === value; }); };
 
 var updateProp = function (obj, key, value) {
-  if (value !== obj[key]) {
-    obj[key] = value;
-  }
+  value !== obj[key] && (obj[key] = value);
 };
 
 var walkChildren = function (node, callback) {
