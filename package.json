@@ -1,6 +1,6 @@
 {
-  "name": "patch2dom",
-  "version": "0.1.6",
+  "name": "@nwtks/patch2dom",
+  "version": "0.2.0",
   "description": "patch virtual node to DOM.",
   "license": "MIT",
   "main": "dist/patch2dom.js",
@@ -9,7 +9,6 @@
     "dist"
   ],
   "author": "nwtks",
-  "homepage": "https://github.com/nwtks/patch2dom",
   "repository": {
     "type": "git",
     "url": "https://github.com/nwtks/patch2dom"
