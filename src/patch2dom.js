@@ -144,7 +144,7 @@ const patchAttrs = (el, attrs) => {
 const removeAttrs = (el, attrs) => {
   slice.call(el.attributes).forEach((a) => {
     const n = a.name;
-    if (!attrs.hasOwnProperty(n) || attrs[n] == null) {
+    if (!Object.prototype.hasOwnProperty.call(attrs, n) || attrs[n] == null) {
       removeAttribute(el, n);
     }
   });
@@ -247,8 +247,10 @@ const updateProp = (obj, key, value) => {
 };
 
 const walkChildren = (node, callback) => {
-  for (let c = node.firstChild; c; c = c.nextSibling) {
+  for (let c = node.firstChild; c; ) {
+    const n = c.nextSibling;
     callback(c);
+    c = n;
   }
 };
 

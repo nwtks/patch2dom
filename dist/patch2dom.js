@@ -147,7 +147,7 @@ var patchAttrs = function (el, attrs) {
 var removeAttrs = function (el, attrs) {
   slice.call(el.attributes).forEach(function (a) {
     var n = a.name;
-    if (!attrs.hasOwnProperty(n) || attrs[n] == null) {
+    if (!Object.prototype.hasOwnProperty.call(attrs, n) || attrs[n] == null) {
       removeAttribute(el, n);
     }
   });
@@ -247,8 +247,10 @@ var updateProp = function (obj, key, value) {
 };
 
 var walkChildren = function (node, callback) {
-  for (var c = node.firstChild; c; c = c.nextSibling) {
+  for (var c = node.firstChild; c; ) {
+    var n = c.nextSibling;
     callback(c);
+    c = n;
   }
 };
 
